@@ -14,7 +14,7 @@ const regSchema = z.object({
 
 /**
  * @REGISTRATION
- * @ROUTE @POST {{url}}/api/auth
+ * @ROUTE @POST {{url}}/api/auth/registration
  * @access PUBLIC
  */
 
@@ -52,8 +52,8 @@ const loginSchema = z.object({
 });
 
 /**
- * @LOGNIN
- * @ROUTE @POST {{url}}/api/auth
+ * @LOGIN
+ * @ROUTE @POST {{url}}/api/auth/login
  * @access PUBLIC
  */
 
@@ -82,6 +82,94 @@ export const login = async (req, res, next) => {
       .cookie('access_token', token, { httpOnly: true })
       .status(200)
       .json({ userData, message: 'user logged in successfully' });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const validationError = fromError(err);
+      return next(errorHandler(400, validationError.toString()));
+    } else {
+      return next(err);
+    }
+  }
+};
+
+const emailSchema = z.object({
+  email: z.string().email(),
+});
+
+/**
+ * @FORGOT_PASSWORD
+ * @ROUTE @POST {{URL}}/api/auth/forgot-password
+ * @ACCESS Public
+ */
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = emailSchema.parse(req.body);
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return next(new errorHandler(400, 'user not registered'));
+    }
+
+    // Generating the reset token
+    const resetToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+
+    // Save token and its expiration time in the user document
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    res.status(200).json({ resetToken });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const validationError = fromError(err);
+      return next(errorHandler(400, validationError.toString()));
+    } else {
+      return next(err);
+    }
+  }
+};
+
+// Define a Zod schema for the reset-password request body
+const ResetPasswordSchema = z.object({
+  token: z.string(),
+  newPassword: z.string().min(6),
+});
+
+/**
+ * @RESET_PASSWORD
+ * @ROUTE @POST {{URL}}/api/auth/reset-password
+ * @ACCESS Public
+ */
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = ResetPasswordSchema.parse(req.body);
+
+    // Verify and decode the token
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Find user by decoded user ID
+    const user = await User.findById(decodedToken.userId);
+    if (!user) {
+      return next(errorHandler(401, 'Invalid or expired token'));
+    }
+
+    // Check if token is expired
+    if (Date.now() > user.resetPasswordExpires) {
+      return next(errorHandler(401, 'Token expired'));
+    }
+
+    // Update user's password
+    user.password = bcrypt.hashSync(newPassword, 10);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Password reset successfully' });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const validationError = fromError(err);
