@@ -6,6 +6,8 @@ const userSchema = new Schema(
       type: String,
       required: true,
       unique: true,
+      minlength: [3, 'Username must be at least 3 characters long'],
+      maxlength: [30, 'Username cannot exceed 30 characters'],
     },
     email: {
       type: String,
@@ -15,6 +17,7 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: true,
+      minlength: [6, 'Password must be at least 6 characters long'],
     },
   },
   { timestamps: true }
