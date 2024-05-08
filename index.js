@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import connectDB from './db.js';
 import authRouter from './routes/auth.routes.js';
+import postRouter from './routes/post.routes.js';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.get('/ping', (req, res) => {
 });
 
 app.use('/api/auth', authRouter);
+app.use('/api/post', postRouter);
 
 // error middleware
 app.use((err, req, res, next) => {
