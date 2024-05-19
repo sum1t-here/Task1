@@ -11,3 +11,9 @@ Create APIs for
 - Task 1 Will be the base for this Task. So continue in the same .
 - Build CRUD operation for posting social media post.
 - Likes & add a comment to a post API.
+
+# Node.js Task 3
+
+- continuation in the previous tasks
+- Add Jwt auth token in all apis
+- Perform data encryption {Optional}
